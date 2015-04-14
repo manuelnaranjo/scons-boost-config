@@ -59,6 +59,36 @@ def BoostVersionCheck(context, version = MINVERSION):
     context.Result(ret)
     return ret
 
+# libs supported so far by FindBoostLibrary
+SUPPORTED = [
+    ''
+]
+
+def FindBoostLibrary(env, conf, name, version=None):
+    '''
+    This method will try to find a name boost library
+
+    '''
+    if name not in SUPPORTED:
+        raise Exception, 'boost-%s not supported by this tool yet' % name
+
+    if 'ld' not in env['LINK']:
+        raise Exception, 'Only gcc linker is supported by this tool'
+
+    base = 'boost_%s' % name
+
+    conf.env['BOOST_PREFIX'] = ''
+    conf.env['BOOST_LIB'] = base
+    conf.env['BOOST_SUFFIX'] = ''
+
+    if version is not None:
+        conf.env['BOOST_PREFIX'] = ':${SHLIBPREFIX}'
+        conf.env['BOOST_SUFFIX'] = '${SHLIBSUFFIX}.%s' % version
+
+    lib = '${BOOST_PREFIX}${BOOST_LIB}${BOOST_SUFFIX}'
+    if conf.TryLink(lib):
+        return conf.env.subst(lib)
+
 def generate(env):
     from SCons import SConf
     SConfBase = SConf.SConfBase
@@ -66,7 +96,7 @@ def generate(env):
     if not env.has_key('BJAM_BIN'):
         env['BJAM_BIN'] = 'bjam'
 
-    class BjamSConfBase(SConfBase):
+    class BoostSConfBase(SConfBase):
         def __init__(self, env, custom_tests = {}, *a, **kw):
             my_tests = {
                 'BjamSupported': BjamSupported,
@@ -75,4 +105,5 @@ def generate(env):
             my_tests.update(custom_tests)
             SConfBase.__init__(self, env, my_tests, *a, **kw)
 
-    setattr(SConf, 'SConfBase', BjamSConfBase)
+    setattr(SConf, 'SConfBase', BoostSConfBase)
+    env.AddMethod(FindBoostLibrary)
